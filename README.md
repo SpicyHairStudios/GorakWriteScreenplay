@@ -1,0 +1,2 @@
+# GorakWriteScreenplay
+shortcuts for writing.
