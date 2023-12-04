@@ -1,0 +1,266 @@
+import bpy
+from bpy.types import Operator, Panel
+
+class WritingAssistantPanel(Panel):
+    bl_label = "Writing Assistant"
+    bl_idname = "PT_WritingAssistantPanel"
+    bl_space_type = 'TEXT_EDITOR'
+    bl_region_type = 'UI'
+    bl_category = 'Gorak Write Screenplay'  # Updated category name
+
+    def draw(self, context):
+        layout = self.layout
+
+        # Add buttons for various writing styles
+        layout.operator("text.create_fountain_file", text="Save the Cat").writing_style = "SaveTheCat"
+        layout.operator("text.create_fountain_file", text="Harmon Story Circle").writing_style = "HarmonStoryCircle"
+        layout.operator("text.create_fountain_file", text="The Hero's Journey").writing_style = "HerosJourney"
+
+        # Display the Word Bank content as buttons in the sidebar
+        word_bank_layout = layout.box()
+        word_bank_layout.label(text="Word Bank:")
+        for word in context.scene.word_bank_content.split('\n'):
+            if word:
+                word_bank_layout.operator("text.insert_word", text=word)
+
+        # Add buttons for managing Word Bank entries
+        word_management_layout = word_bank_layout.row(align=True)
+        word_management_layout.operator("text.add_word", text="Add Word")
+        word_management_layout.operator("text.delete_word", text="Delete Word")
+
+        # Add input field for typing new words
+        word_input_layout = word_management_layout.row(align=True)
+        word_input_layout.prop(context.scene, "new_word", text="")
+
+        # Display the Parking Lot content as buttons in the sidebar
+        parking_lot_layout = layout.box()
+        parking_lot_layout.label(text="Parking Lot:")
+        for idea in context.scene.parking_lot_content.split('\n'):
+            if idea:
+                parking_lot_layout.operator("text.insert_idea", text=idea)
+
+        # Add buttons for managing Parking Lot entries
+        idea_management_layout = parking_lot_layout.row(align=True)
+        idea_management_layout.operator("text.add_idea", text="Add Idea")
+        idea_management_layout.operator("text.delete_idea", text="Delete Idea")
+
+        # Add input field for typing new ideas
+        idea_input_layout = idea_management_layout.row(align=True)
+        idea_input_layout.prop(context.scene, "new_idea", text="")
+
+        # Export Title Page button
+        layout.operator("text.export_title_page", text="Export Title Page")
+
+class CreateFountainFile(Operator):
+    bl_idname = "text.create_fountain_file"
+    bl_label = "Create Fountain File"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    writing_style: bpy.props.StringProperty()
+
+    def execute(self, context):
+        # Define creative steps for each writing style
+        writing_styles = {
+            "SaveTheCat": ["Setup", "Catalyst", "Debate", "Break into Two", "B Story", "Fun and Games", "Midpoint", "Bad Guys Close In", "All Is Lost", "Dark Night of the Soul", "Break into Three", "Finale", "Final Image"],
+            "HarmonStoryCircle": ["You", "Need", "Go", "Search", "Find", "Take", "Return"],
+            "HerosJourney": ["Ordinary World", "Call to Adventure", "Refusal of the Call", "Meeting the Mentor", "Crossing the First Threshold", "Tests, Allies, Enemies", "Approach to the Inmost Cave", "Ordeal", "Reward", "The Road Back", "Resurrection", "Return with the Elixir"]
+        }
+
+        # Get the selected writing style
+        selected_style = self.writing_style
+
+        # Check if the selected writing style is valid
+        if selected_style in writing_styles:
+            # Create a new .fountain file in the text editor
+            bpy.ops.text.new()
+            text_data = bpy.context.edit_text
+            text_data.name = f"{selected_style}Script"
+            text_data.clear()
+
+            # Insert creative steps into the file
+            for step in writing_styles[selected_style]:
+                text_data.write(f"{step}\n\n")
+
+            return {'FINISHED'}
+        else:
+            self.report({'ERROR_INVALID_INPUT'}, f"Invalid writing style: {selected_style}")
+            return {'CANCELLED'}
+
+class InsertWord(Operator):
+    bl_idname = "text.insert_word"
+    bl_label = "Insert Word"
+    
+    word: bpy.props.StringProperty()
+
+    def execute(self, context):
+        # Get the active text data
+        text_data = bpy.context.edit_text
+
+        # Ensure we have a valid text data
+        if text_data:
+            # Get the current cursor position
+            cursor_position = text_data.current_character
+
+            # Insert the selected word at the cursor position
+            text_data.write(self.word + '\n')
+
+            # Move the cursor back to its original position
+            text_data.current_character = cursor_position
+
+        return {'FINISHED'}
+
+class AddWord(Operator):
+    bl_idname = "text.add_word"
+    bl_label = "Add Word"
+    
+    def execute(self, context):
+        # Add a new word to the Word Bank
+        context.scene.word_bank_content += f"{context.scene.new_word}\n"
+        context.scene.new_word = ""  # Clear the input field after adding the word
+        return {'FINISHED'}
+
+class DeleteWord(Operator):
+    bl_idname = "text.delete_word"
+    bl_label = "Delete Word"
+    
+    def execute(self, context):
+        # Delete the selected word from the Word Bank
+        lines = context.scene.word_bank_content.split('\n')
+        if len(lines) > 1:
+            context.scene.word_bank_content = '\n'.join(lines[1:])
+        else:
+            context.scene.word_bank_content = ""
+        return {'FINISHED'}
+
+class InsertIdea(Operator):
+    bl_idname = "text.insert_idea"
+    bl_label = "Insert Idea"
+    
+    idea: bpy.props.StringProperty()
+
+    def execute(self, context):
+        # Get the active text data
+        text_data = bpy.context.edit_text
+
+        # Ensure we have a valid text data
+        if text_data:
+            # Get the current cursor position
+            cursor_position = text_data.current_character
+
+            # Insert the selected idea at the cursor position
+            text_data.write(self.idea + '\n')
+
+            # Move the cursor back to its original position
+            text_data.current_character = cursor_position
+
+        return {'FINISHED'}
+
+class AddIdea(Operator):
+    bl_idname = "text.add_idea"
+    bl_label = "Add Idea"
+    
+    def execute(self, context):
+        # Add a new idea to the Parking Lot
+        context.scene.parking_lot_content += f"{context.scene.new_idea}\n"
+        context.scene.new_idea = ""  # Clear the input field after adding the idea
+        return {'FINISHED'}
+
+class DeleteIdea(Operator):
+    bl_idname = "text.delete_idea"
+    bl_label = "Delete Idea"
+    
+    def execute(self, context):
+        # Delete the selected idea from the Parking Lot
+        lines = context.scene.parking_lot_content.split('\n')
+        if len(lines) > 1:
+            context.scene.parking_lot_content = '\n'.join(lines[1:])
+        else:
+            context.scene.parking_lot_content = ""
+        return {'FINISHED'}
+
+class ExportTitlePage(Operator):
+    bl_idname = "text.export_title_page"
+    bl_label = "Export Title Page"
+
+    def execute(self, context):
+        # Get the title page information
+        title = context.scene.title
+        author = context.scene.author
+        contact = context.scene.contact
+        date = context.scene.date
+        genre = context.scene.genre
+        draft = context.scene.draft
+
+        # Create a new .fountain file for the title page
+        bpy.ops.text.new()
+        text_data = bpy.context.edit_text
+        text_data.name = "TitlePage"
+        text_data.clear()
+
+        # Write the title page information to the file
+        text_data.write(f"title: {title}\n")
+        text_data.write(f"author: {author}\n")
+        text_data.write(f"contact: {contact}\n")
+        text_data.write(f"date: {date}\n")
+        text_data.write(f"genre: {genre}\n")
+        text_data.write(f"draft: {draft}\n\n")
+
+        # Customize the title page content as needed
+        text_data.write("= Title =\n\n")
+        text_data.write("== Subtitle ==\n\n")
+        text_data.write("= Author =\n\n")
+        text_data.write("= Contact =\n\n")
+        text_data.write("= Date =\n\n")
+        text_data.write("= Genre =\n\n")
+        text_data.write("= Draft =\n\n")
+        text_data.write("= Logline =\n\n")
+        text_data.write("= Synopsis =\n\n")
+        text_data.write("= Notes =\n\n")
+
+        return {'FINISHED'}
+
+def register():
+    bpy.types.Scene.word_bank_content = bpy.props.StringProperty(name="Word Bank Content", default="", description="Content for Word Bank")
+    bpy.types.Scene.new_word = bpy.props.StringProperty(name="New Word", default="", description="New word to add to Word Bank")
+    bpy.types.Scene.parking_lot_content = bpy.props.StringProperty(name="Parking Lot Content", default="", description="Content for Parking Lot")
+    bpy.types.Scene.new_idea = bpy.props.StringProperty(name="New Idea", default="", description="New idea to add to Parking Lot")
+    bpy.types.Scene.title = bpy.props.StringProperty(name="Title", default="", description="Title for the Title Page")
+    bpy.types.Scene.author = bpy.props.StringProperty(name="Author", default="", description="Author for the Title Page")
+    bpy.types.Scene.contact = bpy.props.StringProperty(name="Contact", default="", description="Contact information for the Title Page")
+    bpy.types.Scene.date = bpy.props.StringProperty(name="Date", default="", description="Date for the Title Page")
+    bpy.types.Scene.genre = bpy.props.StringProperty(name="Genre", default="", description="Genre for the Title Page")
+    bpy.types.Scene.draft = bpy.props.StringProperty(name="Draft", default="", description="Draft information for the Title Page")
+
+    bpy.utils.register_class(WritingAssistantPanel)
+    bpy.utils.register_class(CreateFountainFile)
+    bpy.utils.register_class(InsertWord)
+    bpy.utils.register_class(AddWord)
+    bpy.utils.register_class(DeleteWord)
+    bpy.utils.register_class(InsertIdea)
+    bpy.utils.register_class(AddIdea)
+    bpy.utils.register_class(DeleteIdea)
+    bpy.utils.register_class(ExportTitlePage)
+
+def unregister():
+    del bpy.types.Scene.word_bank_content
+    del bpy.types.Scene.new_word
+    del bpy.types.Scene.parking_lot_content
+    del bpy.types.Scene.new_idea
+    del bpy.types.Scene.title
+    del bpy.types.Scene.author
+    del bpy.types.Scene.contact
+    del bpy.types.Scene.date
+    del bpy.types.Scene.genre
+    del bpy.types.Scene.draft
+    bpy.utils.unregister_class(WritingAssistantPanel)
+    bpy.utils.unregister_class(CreateFountainFile)
+    bpy.utils.unregister_class(InsertWord)
+    bpy.utils.unregister_class(AddWord)
+    bpy.utils.unregister_class(DeleteWord)
+    bpy.utils.unregister_class(InsertIdea)
+    bpy.utils.unregister_class(AddIdea)
+    bpy.utils.unregister_class(DeleteIdea)
+    bpy.utils.unregister_class(ExportTitlePage)
+
+if __name__ == "__main__":
+    register()
